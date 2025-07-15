@@ -1,0 +1,22 @@
+services:
+  memgenerator:
+    container_name: memgenerator
+    image: memgenerator/local
+    build: ./memgenerator
+    pid: host
+    restart: unless-stopped
+    depends_on:
+      oomwatcher:
+        condition: service_started
+    command:
+      - "--memAvailable"
+
+  oomwatcher:
+    container_name: oomwatcher
+    image: oomwatcher/local
+    build: ./oomwatcher
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    volumes:
+      - /sys:/sys:ro
