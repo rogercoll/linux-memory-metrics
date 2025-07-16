@@ -37,8 +37,7 @@ func FormatFileSizeMb(s uint64) string {
 }
 
 func printMemStats(memResults *mem.VirtualMemoryStat) {
-	fmt.Printf("Total: %v,  OldUsed:%v Used:%v\n", FormatFileSizeMb(memResults.Total), FormatFileSizeMb(memResults.Used), FormatFileSizeMb(memResults.Total-memResults.Available))
-	fmt.Printf("OldUsedPercent:%f%% UsedPercent:%f%%\n", memResults.UsedPercent, float64(float64(memResults.Total-memResults.Available)/float64(memResults.Total))*100)
+	fmt.Printf("Total: %v\nMemTotal - MemUsed: %v (%f%%)\nMemAvailable: %v (%f%%)\n", FormatFileSizeMb(memResults.Total), FormatFileSizeMb(memResults.Total-memResults.Used), 100-memResults.UsedPercent, FormatFileSizeMb(memResults.Available), float64(float64(memResults.Available)/float64(memResults.Total))*100)
 }
 
 func watchMemoryUsage(ctx context.Context, collectionInterval time.Duration) {
@@ -67,7 +66,8 @@ func allocateBytes(size int) []byte {
 }
 
 func main() {
-	useAvailableMem := flag.Bool("memAvailable", false, "Use <Total - MemAvailable> instead of <Total - Free - Buffers - Cached>")
+	useAvailableMem := flag.Bool("memAvailable", false, "Use <MemAvailable> instead of <Total - Free - Buffers - Cached>")
+	mb := flag.Uint64("mb", 100, "Memory to allocate in MB (binary: 1MB = 1024*1024 bytes)")
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -80,17 +80,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Fill with "Total - Used" - 10000 mercy bytes
-	bytesToAllocate := memResults.Total - memResults.Used - 10000
-	strategyFormula := "Used"
+	// Fill with "Total - Used" - 1MB mercy
+	bytesToAllocate := memResults.Total - memResults.Used
+	strategyFormula := "Total - Used"
 	if *useAvailableMem {
-		// Fill with "Available memory" - 10000 mercy bytes
-		bytesToAllocate = memResults.Available - 10000
-		strategyFormula = "Total - Available"
+		// Fill with "Available memory"
+		bytesToAllocate = memResults.Available
+		strategyFormula = "Available"
 	}
 
+	// remove some mercy MB
+	bytesToAllocate -= *mb * 1024 * 1024
+
 	printMemStats(memResults)
-	fmt.Printf("PID: %d, ALLOCATING<%s> %v\n", os.Getpid(), strategyFormula, FormatFileSizeMb(bytesToAllocate))
+	fmt.Printf("PID: %d, ALLOCATING<%s - %d mercy MB>: %v\n", os.Getpid(), strategyFormula, *mb, FormatFileSizeMb(bytesToAllocate))
 
 	var allocatedMemory []byte
 	go func() {

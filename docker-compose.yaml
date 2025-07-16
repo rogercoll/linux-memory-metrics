@@ -1,16 +1,4 @@
 services:
-  memgenerator:
-    container_name: memgenerator
-    image: memgenerator/local
-    build: ./memgenerator
-    pid: host
-    restart: unless-stopped
-    depends_on:
-      oomwatcher:
-        condition: service_started
-    command:
-      - "--memAvailable"
-
   oomwatcher:
     container_name: oomwatcher
     image: oomwatcher/local
@@ -20,3 +8,16 @@ services:
     pid: host
     volumes:
       - /sys:/sys:ro
+
+  memgenerator:
+    container_name: memgenerator
+    image: memgenerator/local
+    build: ./memgenerator
+    pid: host
+    restart: unless-stopped
+    cap_add:
+      - SYS_RAWIO # If the process has CAP_SYS_RAWIO capabilities, a SIGTERM is sent to give the process a chance of exiting cleanly, otherwise a SIGKILL is sent.
+    depends_on:
+      - oomwatcher
+    command:
+      # - "--memAvailable"
