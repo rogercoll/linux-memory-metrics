@@ -1,0 +1,32 @@
+receivers:
+  hostmetrics:
+    collection_interval: 10s
+    root_path: /rootfs # Mounted node's root file system
+    scrapers:
+      memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
+          system.linux.memory.available:
+            enabled: true
+          system.memory.limit:
+            enabled: true
+
+processors:
+  batch: {}
+
+exporters:
+  otlphttp:
+    metrics_endpoint: http://prometheus:9090/api/v1/otlp/v1/metrics
+
+connectors:
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - hostmetrics
+      processors:
+        - batch
+      exporters:
+        - otlphttp

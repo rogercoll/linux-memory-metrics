@@ -8,6 +8,8 @@ services:
     pid: host
     volumes:
       - /sys:/sys:ro
+    profiles:
+      - memgen
 
   memgenerator:
     container_name: memgenerator
@@ -20,4 +22,44 @@ services:
     depends_on:
       - oomwatcher
     command:
-      # - "--memAvailable"
+      - ${MEMGEN_COMMAND:-}
+    profiles:
+      - memgen
+
+  otel_collector:
+    image: otel/opentelemetry-collector-contrib:0.130.0
+    container_name: otel_collector
+    volumes:
+      - ./otelcollector/config-collector.yaml:/etc/otelcol-contrib/config.yaml
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+    networks:
+      - monitoring
+    profiles:
+      - monitoring
+
+  prometheus:
+      image: prom/prometheus
+      container_name: prometheus
+      user: "0"
+      volumes:
+          - ./prometheus/conf/prometheus.yml:/etc/prometheus/prometheus.yml
+          - ./prometheus/data:/prometheus
+      expose:
+          - 9090
+      ports:
+          - '9090:9090'
+      command:
+          - '--web.enable-otlp-receiver'
+          - '--config.file=/etc/prometheus/prometheus.yml'
+      networks:
+          - monitoring
+      profiles:
+        - monitoring
+
+networks:
+    monitoring:
+        driver: bridge
