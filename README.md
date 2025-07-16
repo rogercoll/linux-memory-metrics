@@ -1,4 +1,4 @@
-🔍 Which Kernel Metrics Should You Use to Monitor Memory?
+# 🔍 Which Kernel Metrics Should You Use to Monitor Memory?
 
 Memory management is one of the most intricate—and fascinating—subsystems in the Linux kernel. With its fine-grained memory states and multiple accounting strategies, it provides many ways to interpret memory usage (sometimes leading to confusion).
 
