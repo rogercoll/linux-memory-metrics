@@ -24,14 +24,14 @@ Monitoring tools like `free`, `top` or `ps` switched to rely on `MemAvailable` s
 
 ## Why is important using the right metrics?
 
-**There is an average difference of 6% between the two most common formulas to compute memory utilization, which is not negligible.** This means that depending on the formula used, one might mistakenly believe there is free memory available, when in fact it could trigger the OOM killer.
+**There is an average difference of 6% between the two previously mentioned formulas to compute the memory utilization, which is not negligible.** This means that depending on the formula used, one might mistakenly believe there is free memory available, when in fact it could trigger the OOM killer.
 
 From a sysadmin perspective, relying on inaccurate metrics can lead to improper memory provisioning—either over-allocating resources and wasting costly hardware, or under-allocating and risking unexpected crashes and downtime.
 
 ![plot](./data/available_vs_used.png)
 
 The following command can be used to visualize the memory metrics collected using the OpenTelemetry
-Collector hostmetrics receiver:
+Collector [hostmetrics receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.130.0/receiver/hostmetricsreceiver):
 
 ```bash
 sudo docker compose --profile monitoring up
