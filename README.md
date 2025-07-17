@@ -20,7 +20,7 @@ The [/proc/meminfo](https://man7.org/linux/man-pages/man5/proc_meminfo.5.html) f
 
 Before Linux kernel 3.14, this was a common source of confusion, often leading to misleading or inconsistent memory usage calculations. To address this, the kernel introduced a new metric: `MemAvailable`. MemAvailable was specifically added to provide a more accurate estimate of how much memory is **actually available for applications**, without requiring users to understand the internals of the kernel's memory management. Introduction to the kernel: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0ae398fc54ea69ff85ec700722c9da773
 
-Monitoring tools like `free`, `top` or `ps` switched to rely on `MemAvailable` since version `v4.0.1`, [reference commit](https://gitlab.com/procps-ng/procps/-/commit/2184e90d2). On the other hand, many monitoring agents still rely on old usage formula: `Used = Total - Free - Cached - Buffers - Sreclaimable`.
+Monitoring tools like `free`, `top` or `ps` switched to using `Total - MemAvailable` to display used memory starting from version v4.0.1 [reference commit](https://gitlab.com/procps-ng/procps/-/commit/2184e90d2). On the other hand, some monitoring agents [use](https://github.com/shirou/gopsutil/issues/1873) the old usage formula: `Used = Total - Free - Cached - Buffers - Sreclaimable`.
 
 ## Why is important using the right metrics?
 
@@ -50,8 +50,8 @@ etc.).
 Two main containers are provided to verify the actual free memory:
 
 - [memgenerator](./memgenerator/): Simulates high memory usage by allocating one of two formulas:
-  - Legacy formula: Total - Free - Cached - Buffers - SReclaimable
-  - Modern formula (optional): MemAvailable (used when the --memAvailable flag is set)
+  - Legacy formula: Free + Cached + Buffers + SReclaimable
+  - Modern formula (optional): MemAvailable (used when the `--memAvailable` flag is set)
 
     It also logs the system’s memory stats every 20 seconds to show you what’s happening in real-time. To prioritize the process to be killed by the kernel's OOM killer, it sets its self [oom_score_adj](https://man7.org/linux/man-pages/man5/proc_pid_oom_score_adj.5.html) to the maximum value.
 - [oomwatcher](./oomwatcher/): Attaches an eBPF trace to the kernel’s oom_kill_process function, logging detailed context about any process killed by the OOM killer.

@@ -99,7 +99,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Fill with "Total - Used" - 1MB mercy
+	// Fill with "Total - Used"
 	bytesToAllocate := memResults.Total - memResults.Used
 	strategyFormula := "Total - Used"
 	if *useAvailableMem {
