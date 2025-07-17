@@ -59,16 +59,35 @@ func watchMemoryUsage(ctx context.Context, collectionInterval time.Duration) {
 
 func allocateBytes(size int) []byte {
 	ballast := make([]byte, size)
+	const oneGB = 1 << 30 // 1GB in bytes = 1073741824
+
 	for i := 0; i < len(ballast); i++ {
 		ballast[i] = byte('A')
+		// Sleep after each GB written
+		if (i+1)%oneGB == 0 {
+			time.Sleep(100 * time.Millisecond) // or any delay you want
+		}
 	}
 	return ballast
 }
 
+// /proc/[pid]/oom_score_adj (since Linux 2.6.36)
+// This file can be used to adjust the badness heuristic used to select which process gets killed in out-of-memory conditions.
+// The badness heuristic assigns a value to each candidate task ranging from 0 (never kill) to 1000 (always kill) to determine which process is targeted. The units are roughly a proportion along that range of allowed memory the process may allocate from, based on an estimation of its current memory and swap use. For example, if a task is using all allowed memory, its badness score will be 1000. If it is using half of its allowed memory, its score will be 500.
+func setBadnessEuristics(score int) error {
+	fmt.Printf("Setting oom_score_adj to 1000 for process %d\n", os.Getpid())
+	return os.WriteFile(fmt.Sprintf("/proc/%d/oom_score_adj", os.Getpid()), []byte(fmt.Sprintf("%d", score)), 0o644)
+}
+
 func main() {
 	useAvailableMem := flag.Bool("memAvailable", false, "Use <MemAvailable> instead of <Total - Free - Buffers - Cached>")
-	mb := flag.Uint64("mb", 100, "Memory to allocate in MB (binary: 1MB = 1024*1024 bytes)")
 	flag.Parse()
+
+	// prioritize killing this process
+	err := setBadnessEuristics(1000)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go watchMemoryUsage(ctx, 20*time.Second)
@@ -89,11 +108,15 @@ func main() {
 		strategyFormula = "Available"
 	}
 
+	// calculate default mercy bytes (3% of the bytes to allocate)
+	mb := flag.Uint64("mercybytes", uint64(float64(bytesToAllocate)*0.03), "Mercy memory bytes to not allocate, defaults to 3% of the total to allocate")
+	flag.Parse()
+
 	// remove some mercy MB
-	bytesToAllocate -= *mb * 1024 * 1024
+	bytesToAllocate -= *mb
 
 	printMemStats(memResults)
-	fmt.Printf("PID: %d, ALLOCATING<%s - %d mercy MB>: %v\n", os.Getpid(), strategyFormula, *mb, FormatFileSizeMb(bytesToAllocate))
+	fmt.Printf("PID: %d, ALLOCATING<%s - %s mercy>: %v\n", os.Getpid(), strategyFormula, FormatFileSizeMb(*mb), FormatFileSizeMb(bytesToAllocate))
 
 	var allocatedMemory []byte
 	go func() {

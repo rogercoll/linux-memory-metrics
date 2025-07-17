@@ -44,13 +44,19 @@ Check the metrics using PromQL in
 
 **⚠️ Caution: Use at your own risk! The following test intentionally pushes your system's memory usage to its limits. There’s a small chance that the kernel's OOM killer won't target the memory-hogging container — which could freeze your entire system. Make sure you’re not running anything important before continuing.**
 
+**Ideal environment**: No other high memory processes running (Browser, Slack,
+etc.).
+
 Two main containers are provided to verify the actual free memory:
 
 - [memgenerator](./memgenerator/): Simulates high memory usage by allocating one of two formulas:
   - Legacy formula: Total - Free - Cached - Buffers - SReclaimable
   - Modern formula (optional): MemAvailable (used when the --memAvailable flag is set)
-    It also logs the system’s memory stats every 20 seconds to show you what’s happening in real-time.
+
+    It also logs the system’s memory stats every 20 seconds to show you what’s happening in real-time. To prioritize the process to be killed by the kernel's OOM killer, it sets its self [oom_score_adj](https://man7.org/linux/man-pages/man5/proc_pid_oom_score_adj.5.html) to the maximum value.
 - [oomwatcher](./oomwatcher/): Attaches an eBPF trace to the kernel’s oom_kill_process function, logging detailed context about any process killed by the OOM killer.
+
+To make the difference more noticeable, the number of bytes actually allocated is reduced by 3% compared to the amount returned by the legacy or modern formula. This margin can be adjusted using the `--mercybytes` flag.
 
 ### Run the Test with the Legacy Formula
 
